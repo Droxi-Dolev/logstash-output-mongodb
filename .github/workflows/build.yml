@@ -31,8 +31,8 @@ jobs:
       - name: Setup JRuby
         uses: ruby/setup-ruby@v1
         env:
-          LOGSTASH_PATH: ./logstash
-          LOGSTASH_SOURCE: 1
+          LOGSTASH_PATH: "./logstash"
+          LOGSTASH_SOURCE: "1"
         with:
           ruby-version: "jruby-9.2.9.0"
           working-directory: ./main
