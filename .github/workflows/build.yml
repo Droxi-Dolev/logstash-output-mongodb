@@ -25,14 +25,13 @@ jobs:
           bundler-cache: true # runs 'bundle install' and caches installed gems automatically
 
       - name: Execute tests
-        run: bundle exec rake
+        run: bundle exec rspec
 
       - name: Build ruby GEM
-        working-directory: ./main
-        run: gem build logstash-output-mongodb.gem
+        run: gem build logstash-output-mongodb
 
       - name: Upload GEM as a build artifact
         uses: actions/upload-artifact@v3
         with:
           name: logstash-output-mongodb.gem
-          path: ./logstash-output-mongodb.gem
+          path: ./logstash-output-mongodb-*.gem
