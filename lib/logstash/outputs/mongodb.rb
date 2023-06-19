@@ -110,8 +110,8 @@ class LogStash::Outputs::Mongodb < LogStash::Outputs::Base
       else
         @db[event.sprintf(@collection)].insert_one(document)
       end
-    rescue => e
-      if e.message =~ /^E11000/
+    rescue Mongo::Error::OperationFailure => e
+      if e.code == 11000
         # On a duplicate key error, skip the insert.
         # We could check if the duplicate key err is the _id key
         # and generate a new primary key.
@@ -123,6 +123,10 @@ class LogStash::Outputs::Mongodb < LogStash::Outputs::Base
         sleep(@retry_delay)
         retry
       end
+    rescue Mongo::Error => e
+      @logger.warn("Failed to send event to MongoDB, retrying in #{@retry_delay.to_s} seconds", :event => event, :exception => e)
+      sleep(@retry_delay)
+      retry
     end
   end
 
