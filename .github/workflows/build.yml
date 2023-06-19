@@ -11,6 +11,7 @@ jobs:
     env:
       LOGSTASH_PATH: ${{ github.workspace }}/logstash
       LOGSTASH_SOURCE: "1"
+      OSS: "true"
     steps:
       - name: Checkout source code
         uses: actions/checkout@v3
@@ -30,6 +31,13 @@ jobs:
         with:
           java-version: "17"
           distribution: "temurin"
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: "Install logstash dependencies (https://github.com/elastic/logstash/tree/v8.8.1#building-logstash)"
+        working-directory: ./logstash
+        run: ./gradlew assemble
 
       - name: Setup JRuby
         uses: ruby/setup-ruby@v1
