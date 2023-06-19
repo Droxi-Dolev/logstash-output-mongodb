@@ -11,6 +11,16 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v3
+        with:
+          path: main
+
+      - name: Checkout logstash repo
+        uses: actions/checkout@v3
+        with:
+          repository: elastic/logstash
+          ref: "v8.8.1"
+          path: logstash
+          fetch-depth: 1
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -20,18 +30,24 @@ jobs:
 
       - name: Setup JRuby
         uses: ruby/setup-ruby@v1
+        env:
+          LOGSTASH_PATH: ./logstash
+          LOGSTASH_SOURCE: 1
         with:
           ruby-version: "jruby-9.2.9.0"
+          working-directory: ./main
           bundler-cache: true # runs 'bundle install' and caches installed gems automatically
 
       - name: Execute tests
+        working-directory: ./main
         run: bundle exec rspec
 
       - name: Build ruby GEM
+        working-directory: ./main
         run: gem build logstash-output-mongodb
 
       - name: Upload GEM as a build artifact
         uses: actions/upload-artifact@v3
         with:
           name: logstash-output-mongodb.gem
-          path: ./logstash-output-mongodb-*.gem
+          path: ./main/logstash-output-mongodb-*.gem
