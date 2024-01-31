@@ -1,5 +1,10 @@
-## #unreleased
+## 3.2.0
+  - Add support for selecting the MongoDB database to insert into dynamically based on a field in the event.
+
+## 3.1.8
   - Fix: Fix failing test spec on jruby-9.3.4.0 [#81](https://github.com/logstash-plugins/logstash-output-mongodb/pull/81)
+  - Fix: Fix detection of duplicate key errors by using the error type and code instead of the message [#1](https://github.com/Droxi-Dolev/logstash-output-mongodb/pull/1)
+  - Fix: Fix big decimal new deprecation warning [#2](https://github.com/Droxi-Dolev/logstash-output-mongodb/pull/2)
 
 ## 3.1.7
   - Fix "wrong number of arguments" error when shipping events to MongoDB (fixes #60, #64, #65) [#66](https://github.com/logstash-plugins/logstash-output-mongodb/pull/66)

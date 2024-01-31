@@ -45,6 +45,41 @@ bundle install
 bundle exec rspec
 ```
 
+### Setup instructions for Amazon Linux 2023
+- Install JDK 17
+```sh
+sudo dnf install java-17-amazon-corretto-devel
+export JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto.aarch64
+```
+
+- Clone and build logstash
+```sh
+git clone --depth 1 --branch v8.8.1 https://github.com/elastic/logstash
+cd logstash
+export OSS=true
+export LOGSTASH_SOURCE=1
+export LOGSTASH_PATH=~/logstash
+./gradlew assemble
+```
+
+- Install JRuby 9.2.9.0
+```sh
+sudo dnf install gcc
+cd ~
+wget https://repo1.maven.org/maven2/org/jruby/jruby-dist/9.2.9.0/jruby-dist-9.2.9.0-bin.zip
+unzip jruby-dist-9.2.9.0-bin.zip
+rm jruby-dist-9.2.9.0-bin.zip
+export PATH=$PATH:~/jruby-9.2.9.0/bin
+```
+
+- Install Ruby build tools
+```sh
+cd logstash-output-mongodb
+gem install rake
+gem install bundler -v 2.3.27
+bundle install
+```
+
 ### 2. Running your unpublished Plugin in Logstash
 
 #### 2.1 Run in a local Logstash clone
