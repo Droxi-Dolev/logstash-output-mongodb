@@ -14,7 +14,8 @@ class LogStash::Outputs::Mongodb < LogStash::Outputs::Base
   # See http://docs.mongodb.org/manual/reference/connection-string/.
   config :uri, :validate => :string, :required => true
 
-  # The database to use.
+  # The database to use. This value can use `%{foo}` values to dynamically
+  # select a collection based on data in the event.
   config :database, :validate => :string, :required => true
 
   # The collection to use. This value can use `%{foo}` values to dynamically
@@ -52,21 +53,26 @@ class LogStash::Outputs::Mongodb < LogStash::Outputs::Base
     end
 
     Mongo::Logger.logger = @logger
-    conn = Mongo::Client.new(@uri)
-    @db = conn.use(@database)
+    @conn = Mongo::Client.new(@uri)
+    @dbs = {}
 
-    @closed = Concurrent::AtomicBoolean.new(false)
-    @documents = {}
+    if @bulk
+      @documents = {}
+      @closed = Concurrent::AtomicBoolean.new(false)
 
-    @bulk_thread = Thread.new(@bulk_interval) do |bulk_interval|
-      while @closed.false? do
-        sleep(bulk_interval)
+      @bulk_thread = Thread.new(@bulk_interval) do |bulk_interval|
+        while @closed.false? do
+          sleep(bulk_interval)
 
-        @@mutex.synchronize do
-          @documents.each do |collection, values|
-            if values.length > 0
-              @db[collection].insert_many(values)
-              @documents.delete(collection)
+          @@mutex.synchronize do
+            @documents.each do |dbname, db_documents|
+              db_conn = @dbs[dbname]
+              db_documents.each do |collection, values|
+                if values.length > 0
+                  db_conn[collection].insert_many(values)
+                  db_documents.delete(collection)
+                end
+              end
             end
           end
         end
@@ -94,21 +100,37 @@ class LogStash::Outputs::Mongodb < LogStash::Outputs::Base
         document["_id"] = BSON::ObjectId.new
       end
 
+      dbname = event.sprintf(@database)
+
       if @bulk
         collection = event.sprintf(@collection)
         @@mutex.synchronize do
-          if(!@documents[collection])
-            @documents[collection] = []
+          if (!@dbs[dbname])
+            @dbs[dbname] = @conn.use(dbname)
           end
-          @documents[collection].push(document)
 
-          if(@documents[collection].length >= @bulk_size)
-            @db[collection].insert_many(@documents[collection])
-            @documents.delete(collection)
+          if(!@documents[dbname])
+            @documents[dbname] = {}
+          end
+          db_documents = @documents[dbname]
+
+          if(!db_documents[collection])
+            db_documents[collection] = []
+          end
+          db_documents[collection].push(document)
+
+          if(db_documents[collection].length >= @bulk_size)
+            db_conn = @dbs[dbname]
+            db_conn[collection].insert_many(db_documents[collection])
+            db_documents.delete(collection)
           end
         end
       else
-        @db[event.sprintf(@collection)].insert_one(document)
+        if (!@dbs[dbname])
+          @dbs[dbname] = @conn.use(dbname)
+        end
+        db_conn = @dbs[dbname]
+        db_conn[event.sprintf(@collection)].insert_one(document)
       end
     rescue Mongo::Error::OperationFailure => e
       if e.code == 11000
@@ -131,8 +153,11 @@ class LogStash::Outputs::Mongodb < LogStash::Outputs::Base
   end
 
   def close
-    @closed.make_true
-    @bulk_thread.wakeup
-    @bulk_thread.join
+    if @bulk
+      @closed.make_true
+      @bulk_thread.wakeup
+      @bulk_thread.join
+    end
+    @dbs = {}
   end
 end
