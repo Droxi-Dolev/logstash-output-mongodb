@@ -159,6 +159,5 @@ class LogStash::Outputs::Mongodb < LogStash::Outputs::Base
       @bulk_thread.join
     end
     @dbs = {}
-    @conn.close
   end
 end
